@@ -130,7 +130,7 @@ class DB:
     def insert_row(self, book_info):
         cur = self.con.cursor()
         q = f"""INSERT INTO {BOOKS_TABLE_NAME} VALUES(
-            :isbn13, :title, :authors, :average_rating, :isbn, :language_code,
+            :title, :authors, :average_rating, :isbn, :isbn13, :language_code,
             :num_pages, :ratings_count, :text_reviews, :publication_date, :publisher, :checked_out
             )"""
 
