@@ -1,7 +1,6 @@
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS users;
 
-CREATE TABLE users(
-    user_name TEXT NOT NULL,
-    num_checked_out INTEGER,
-    UNIQUE(user_name)
+CREATE TABLE IF NOT EXISTS users(
+    userID TEXT NOT NULL,
+    UNIQUE(userID)
 );

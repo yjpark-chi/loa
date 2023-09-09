@@ -1,12 +1,12 @@
-DROP TABLE IF EXISTS books;
+-- DROP TABLE IF EXISTS books;
 
-CREATE TABLE books(
+CREATE TABLE IF NOT EXISTS books(
     bookID TEXT NOT NULL,
     title TEXT NOT NULL,
     authors TEXT,
     average_rating REAL,
     isbn TEXT NOT NULL,
-    isbn13 INTEGER NOT NULL,
+    isbn13 TEXT NOT NULL,
     language_code TEXT,
     num_pages INTEGER,
     ratings_count INTEGER,
