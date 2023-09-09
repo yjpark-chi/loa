@@ -16,7 +16,7 @@ class Library:
         """
         Creates a new Book object and adds it to catalogue
         """
-        r = input("Would you like to search using a title, author, or ISBN13?")
+        r = input("Would you like to search using a title, author, or ISBN13? ")
         if r.lower() == "title":
             title = input("Please provide the title: ")
             rv = self.search_book(title=title)
@@ -24,28 +24,42 @@ class Library:
             author = input("Please provide the author: ")
             rv = self.search_book(author=author)
         elif r.lower() == "isbn13":
-            isbn13 = input("Please provide the isbn13")
+            isbn13 = input("Please provide the isbn13: ")
             rv = self.search_book(isbn13=isbn13)
         else:
-            return ["Please provide a valid title, author, or ISBN13."]
+            print("Please provide a valid title, author, or ISBN13. ")
+            return 
 
         if not rv:
+            redo = input("Would you like to do another search? (Y/N) ")
+            if redo == "Y" or redo == "y":
+                return
             self.make_book()
         inds, menu = rv
         print("Search results: title | author | isbn13")
+
+        # display search results
         for i in range(1, len(menu)+1):
             print(f"{i}. {menu[i-1]}")
         print(f"{len(menu)+1}. My book isn't on the list.")
+
+        # user provides input
         resp = input("Make selection: ")
-        resp = int(resp)
-    
-        # TO DO: check if a book is checked out before
-        # you check it out to current user.
-        if resp==len(menu)+1:
-            self.make_book()
-        elif not 1 <= resp <= len(menu):
-            print("Please provide a valid response.")
+        try:
+            resp = int(resp)
+            assert 1 <= resp <= len(menu)+1
+        except ValueError:
+            print("Please provide a valid input")
             return
+        except AssertionError:
+            print("Please provide a value within range.")
+            return
+
+        if resp==len(menu)+1:
+            redo = input("Would you like to do another search? (Y/N) ")
+            if redo == "Y" or redo == "y":
+                return
+            self.make_book()
         else:
             self.set_book_out(inds[resp-1])
 
@@ -73,12 +87,9 @@ class Library:
         for i in range(len(rv)):
             prob = jaro.jaro_winkler_metric(search_term, rv[i][0])
             if prob >= MATCH:
-                probs_titles[prob].append((rv[i][1], rv[i][2], rv[i][3], i))
+                probs_titles[prob].append((rv[i][1], rv[i][2], rv[i][3], rv[i][4]))
         if len(probs_titles) < 1:
             return
-        elif len(probs_titles) == 1:
-            val = probs_titles.values()[0]
-            return [" | ".join([val[1], val[2], val[3]])]
 
         probs = list(probs_titles.keys())
         self.quicksort(probs, 0, len(probs)-1)
@@ -127,20 +138,65 @@ class Library:
         self.db.insert_row(rv)
         return
 
-
     def set_book_out(self, ind):
         """
         Calls db functions to change a book's status as checked out.
         """
-        rv = self.db.set_checked_out(ind, self.cur_user)
+        rv = self.db.check_book_out(ind, self.cur_user)
         if not rv:
+            print("Could not check out book.")
+        print("Book successfully checked out.")
+        return
+
+
+    def create_user(self):
+        """
+        Creates user based on provided username.
+        """
+        rv = self.db.create_user(self.cur_user)
+        print(f"User successfully created. Welcome, {self.cur_user}")
+        return rv
+
+
+    def get_user_info(self):
+        """
+        Retrieves books that the current user has out.
+        """
+        print("Retrieving user info...")
+        rv = self.db.get_user_info(self.cur_user)
+        if not rv:
+            print("You have no books out.")
             return
-        else:
-            self.num_checked_out += 1
+        print("Here is your information: ")
+        print(f"You currently have {len(rv)} books out.")
+        for i in range(1, len(rv)+1):
+            print(f"{i}. {rv[i-1][1]}")
+        return rv
 
 
-    def update_user(self):
-        self.db.add_book_to_user()
+    def checkin_book(self):
+        """
+        Check book in when a user returns it.
+        """
+        rv = self.get_user_info()
+        if not rv:
+            print("You have no books out.")
+            return
+        print(rv)
+        resp = input("Which book would you like to return? ")
+        try:
+            resp = int(resp)
+            assert 1 <= resp <= len(rv)
+        except ValueError:
+            print("Please provide a valid response.")
+            return False
+        except AssertionError:
+            print("Please provide a value within range.")
+            return False
+
+        self.db.return_book(rv[resp-1][0], self.cur_user)
+        print("Book successfully checked in.")
+        return True
 
 
     def pivot(self, probs, lb, ub):
@@ -183,14 +239,25 @@ class Library:
 def go():
     library = Library()
     
-    user_name = input("Hello, what's your user nickname? ")
+
+    # get username from user
+    user_name = input("Hello, what's your userID? ")
+    if not user_name:
+        print("Error, please enter a valid userID.")
+        return
     library.cur_user = user_name
-    
+    user_set = library.create_user()
+    if not user_set:
+        print("Error, could not set userID. Please try again.")
+        return
+            
+
     while True:
         opts = {
             1: "Check out a book",
-            2: "View my info",
-            3: "Leave"
+            2: "Check in a book",
+            3: "View my info",
+            4: "Leave"
         }
 
         print('What would you like to do today\n')
@@ -200,21 +267,24 @@ def go():
         print("You entered: ", rv)
         try:
             rv = int(rv)
+            assert 1<= rv <= 4
         except ValueError as e:
             print(e)
-            print("Please enter a number between 1 and 3.")
-            library.db.close_library()
+            print("Please enter a number between 1 and 4. ")
+        except AssertionError:
+            print("Please enter a value within range.")
+
         if rv == 1:
             library.checkout_book()
         elif rv == 2:
-            pass
+            library.checkin_book()
         elif rv == 3:
+            library.get_user_info()
+        elif rv == 4:
             print("Please come again.")
-            library.db.close_library()
             break
     
-    
-
+    library.db.close_library()
 
 if __name__ == "__main__":
     go()
